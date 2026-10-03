@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Wortschatz">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html,body{margin:0}</style>
+<title>Wortschatz</title>
+<meta name="theme-color" content="#f2c200">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@1,8..60,400;1,8..60,500&display=swap">
+<style>
+/* Layout: one narrow phone column (max 540px), sticky top bar, stacked set cards; practice screen is a single focused card. */
+:root{
+  --paper:#eef0f3;      /* cool exercise-book grey */
+  --surface:#ffffff;
+  --ink:#161b25;
+  --muted:#596274;
+  --line:#d9dde4;
+  --track:#e2e5ea;
+  --accent:#f2c200;     /* study-booklet yellow */
+  --accent-ink:#161b25;
+  --der:#2456c4;        /* classroom article colours */
+  --die:#c22f3a;
+  --das:#1d7a4c;
+  --ok:#1d7a4c; --ok-bg:#e3f2ea;
+  --bad:#c22f3a; --bad-bg:#fae7e8;
+  --warn:#7a5d00; --warn-bg:#fdf3cc;
+  --font-display:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
+  --font-body:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --font-example:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#101319; --surface:#1a1e27; --ink:#eef0f4; --muted:#9ba4b4; --line:#2b313d; --track:#272c37;
+    --accent:#f2c200; --accent-ink:#161b25;
+    --der:#86a8ff; --die:#ff8790; --das:#62d39d;
+    --ok:#62d39d; --ok-bg:#15291f; --bad:#ff8790; --bad-bg:#33191d; --warn:#f2c94c; --warn-bg:#2e2710;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#101319; --surface:#1a1e27; --ink:#eef0f4; --muted:#9ba4b4; --line:#2b313d; --track:#272c37;
+  --accent:#f2c200; --accent-ink:#161b25;
+  --der:#86a8ff; --die:#ff8790; --das:#62d39d;
+  --ok:#62d39d; --ok-bg:#15291f; --bad:#ff8790; --bad-bg:#33191d; --warn:#f2c94c; --warn-bg:#2e2710;
+}
+*{box-sizing:border-box}
+html,body{background:var(--paper)}
+body{color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+#app{max-width:540px;margin:0 auto;padding-inline:16px;padding-block:0 40px;min-height:100%}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);display:flex;align-items:center;gap:12px;padding-block:12px;margin-inline:-16px;padding-inline:16px;border-bottom:1px solid transparent}
+.bar.scrolled{border-bottom-color:var(--line)}
+.brand{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:.01em;flex:1;display:flex;align-items:center;gap:8px}
+.brand .mark{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-size:19px}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bar-title{flex:1;font-family:var(--font-display);font-weight:600;font-size:21px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* level switch */
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--track);padding:4px;border-radius:14px;margin-block:4px 16px}
+.levels button{border:0;background:transparent;height:44px;border-radius:10px;font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:.04em;color:var(--muted);cursor:pointer}
+.levels button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.levels button .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:.35;margin-left:5px;vertical-align:middle}
+.levels button.has-data .dot{background:var(--accent);opacity:1}
+
+/* level summary */
+.level-head{display:flex;flex-direction:column;gap:10px;padding-block:6px 18px}
+.level-head .row{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.level-big{font-family:var(--font-display);font-weight:700;font-size:64px;line-height:.9;letter-spacing:-.01em}
+.level-stats{display:flex;flex-direction:column;gap:2px;color:var(--muted);font-size:15px}
+.level-stats strong{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.note{font-size:13.5px;color:var(--muted)}
+
+.meter{height:8px;border-radius:99px;background:var(--track);overflow:hidden;display:flex}
+.meter i{display:block;height:100%;background:var(--ink)}
+.meter i.diff{background:var(--bad);opacity:.85}
+.meter.thin{height:6px}
+
+/* resume banner */
+.resume{display:flex;align-items:center;gap:12px;background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;flex-wrap:wrap}
+.resume .txt{flex:1;min-width:160px}
+.resume .txt b{display:block;font-family:var(--font-display);font-size:20px;font-weight:700}
+.resume .txt span{font-size:14px}
+.resume .acts{display:flex;gap:8px}
+.resume button{border:0;border-radius:10px;height:42px;padding-inline:14px;font-weight:600;cursor:pointer}
+.resume .go{background:var(--accent-ink);color:#fff}
+.resume .drop{background:rgba(0,0,0,.08);color:var(--accent-ink)}
+
+/* set list */
+.sets{display:flex;flex-direction:column;gap:12px}
+.set{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.set-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.set-name{font-family:var(--font-display);font-weight:700;font-size:26px;line-height:1}
+.set-count{color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums}
+.set-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{display:flex;flex-direction:column}
+.stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--font-display);font-weight:600;font-size:22px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:15px;color:var(--muted);font-weight:500}
+.stat.bad .v{color:var(--bad)}
+.set-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;min-height:50px;padding-inline:14px;font-weight:600;font-size:16.5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.15}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.big{min-height:56px;font-size:18px;width:100%}
+.btn .count{font-variant-numeric:tabular-nums;background:var(--bad-bg);color:var(--bad);border-radius:99px;padding:1px 8px;font-size:14px}
+:focus-visible{outline:3px solid var(--der);outline-offset:2px}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px 18px;display:flex;flex-direction:column;gap:8px}
+.empty h3{margin:0;font-family:var(--font-display);font-size:24px}
+.empty p{margin:0;color:var(--muted)}
+
+/* practice */
+.prac-meta{display:flex;flex-direction:column;align-items:flex-end;gap:0;font-variant-numeric:tabular-nums}
+.prac-meta b{font-family:var(--font-display);font-size:22px;font-weight:700;line-height:1}
+.prac-meta span{font-size:12.5px;color:var(--muted)}
+.prac-progress{margin-block:2px 18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 18px;display:flex;flex-direction:column;gap:16px}
+.prompt-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:3px 9px;font-size:12px;letter-spacing:.04em;text-transform:none;font-weight:600;background:var(--track);color:var(--muted)}
+.chip.again{background:var(--bad-bg);color:var(--bad)}
+.prompt{font-family:var(--font-display);font-weight:600;font-size:clamp(34px,10vw,46px);line-height:1.02;text-wrap:balance;overflow-wrap:anywhere}
+.gram{font-size:14.5px;color:var(--muted)}
+.answer-input{width:100%;height:58px;border-radius:14px;border:2px solid var(--line);background:var(--paper);color:var(--ink);font:500 20px/1 var(--font-body);padding-inline:14px}
+.answer-input:focus{outline:none;border-color:var(--ink)}
+.answer-input[readonly]{opacity:.8}
+.answer-input.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.key{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);font-size:19px;font-weight:600;cursor:pointer}
+.tools .spacer{flex:1}
+.hint-btn{height:44px;padding-inline:14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.hint-btn:disabled{opacity:.45}
+.hint-out{min-height:28px;font-size:22px;font-family:var(--font-display);font-weight:600;color:var(--warn);letter-spacing:.02em}
+.hint-out small{font-family:var(--font-body);font-size:13px;color:var(--muted);font-weight:500;letter-spacing:0;margin-left:6px}
+.ask-acts{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.ask-acts .btn.skip{color:var(--muted);font-weight:500}
+
+/* feedback */
+.verdict{display:flex;flex-direction:column;gap:4px;border-radius:14px;padding:12px 14px}
+.verdict.ok{background:var(--ok-bg);color:var(--ok)}
+.verdict.bad{background:var(--bad-bg);color:var(--bad)}
+.verdict h2{margin:0;font-family:var(--font-display);font-size:28px;line-height:1}
+.verdict p{margin:0;font-size:15px;color:var(--ink)}
+.verdict p s{color:var(--muted)}
+.solution{font-family:var(--font-display);font-weight:700;font-size:clamp(32px,9vw,42px);line-height:1.05;overflow-wrap:anywhere}
+.solution .lbl{display:block;font-family:var(--font-body);font-size:12.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;margin-bottom:4px}
+.art-der{color:var(--der)} .art-die{color:var(--die)} .art-das{color:var(--das)}
+.facts{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.fact{display:grid;grid-template-columns:84px 1fr;gap:10px;font-size:16px}
+.fact .k{font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding-top:3px}
+.forms{font-weight:600}
+.forms .arrow{color:var(--muted);font-weight:400;padding-inline:4px}
+.example{display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);padding-top:14px}
+.example .de{font-family:var(--font-example);font-style:italic;font-size:21px;line-height:1.3}
+.example .en{color:var(--muted);font-size:15.5px}
+.related{display:flex;flex-wrap:wrap;gap:6px}
+.related span{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:14.5px}
+
+/* summary */
+.sum-head{padding-block:8px 16px}
+.sum-head h1{margin:0;font-family:var(--font-display);font-size:44px;line-height:1}
+.sum-head p{margin:4px 0 0;color:var(--muted)}
+.tally{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.tally div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column}
+.tally b{font-family:var(--font-display);font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.tally span{font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.tally .ok b{color:var(--ok)} .tally .bad b{color:var(--bad)} .tally .hint b{color:var(--warn)}
+.section-title{font-family:var(--font-display);font-size:22px;font-weight:700;margin:0 0 8px}
+.wordlist{list-style:none;margin:0 0 20px;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.wordlist li{padding:12px 14px;display:flex;justify-content:space-between;gap:12px;font-size:17px}
+.wordlist li+li{border-top:1px solid var(--line)}
+.wordlist li b{font-weight:600}
+.wordlist li span{color:var(--muted);text-align:right}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+/* settings */
+.group{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px}
+.group h2{margin:0;padding:14px 16px 0;font-size:12.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.group .body{padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.group p{margin:0}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:16px}
+.kv span{color:var(--muted)}
+.confirm{background:var(--bad-bg);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.confirm p{color:var(--ink)}
+.confirm .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;font-weight:600;z-index:20}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="app" aria-live="polite"></div>
+
+<!-- ============================================================
+     VOCABULARY DATA  (kept separate from the engine below)
+     Sample A2 seed — NOT the complete Goethe A2 list.
+     To add a level or a full dataset, call
+       Wortschatz.registerVocabulary("B1", [ ...items ])
+     with items in the same shape. No engine changes needed.
+     ============================================================ -->
+<script id="vocab-a2">
+window.WORTSCHATZ_DATA = window.WORTSCHATZ_DATA || {};
+window.WORTSCHATZ_DATA.A2 = {
+  source: "Sample seed based on the Goethe-Zertifikat A2 Wortliste (Goethe-Institut). Not the complete list.",
+  items: [
+  {id:"a2_001",english:"offer (special offer)",german:"Angebot",article:"das",partOfSpeech:"noun",plural:"Angebote",exampleGerman:"Heute sind Bananen im Angebot.",exampleEnglish:"Today bananas are on special offer.",relatedWords:["anbieten"],verbForms:null},
+  {id:"a2_002",english:"differently / in another way",german:"anders",partOfSpeech:"adverb",exampleGerman:"Anders geht das leider nicht.",exampleEnglish:"Unfortunately it won't work any other way.",relatedWords:[],verbForms:null},
+  {id:"a2_003",english:"to change (something)",german:"ändern",partOfSpeech:"verb",exampleGerman:"Wie kann ich mein Passwort ändern?",exampleEnglish:"How can I change my password?",relatedWords:[],verbForms:{present:"ändert",preterite:"änderte",perfect:"hat geändert"}},
+  {id:"a2_004",english:"to begin / to start",german:"anfangen",partOfSpeech:"verb",exampleGerman:"Der Unterricht fängt gleich an.",exampleEnglish:"The lesson is about to start.",relatedWords:["der Anfang"],verbForms:{present:"fängt an",preterite:"fing an",perfect:"hat angefangen"}},
+  {id:"a2_005",english:"beginning",german:"Anfang",article:"der",partOfSpeech:"noun",plural:"Anfänge",exampleGerman:"Sie wohnt am Anfang der Straße.",exampleEnglish:"She lives at the beginning of the street.",relatedWords:["anfangen"],verbForms:null},
+  {id:"a2_006",english:"fear",german:"Angst",article:"die",partOfSpeech:"noun",plural:"Ängste",exampleGerman:"Hab keine Angst!",exampleEnglish:"Don't be afraid!",relatedWords:[],verbForms:null},
+  {id:"a2_007",english:"to arrive",german:"ankommen",partOfSpeech:"verb",exampleGerman:"Wann kommt dieser Zug an?",exampleEnglish:"When does this train arrive?",relatedWords:["kommen"],verbForms:{present:"kommt an",preterite:"kam an",perfect:"ist angekommen"}},
+  {id:"a2_008",english:"to switch on (a light, a device)",german:"anmachen",partOfSpeech:"verb",exampleGerman:"Mach bitte das Licht an!",exampleEnglish:"Please switch on the light!",relatedWords:["ausmachen"],verbForms:{present:"macht an",preterite:"machte an",perfect:"hat angemacht"}},
+  {id:"a2_009",english:"to register / to sign up",german:"sich anmelden",partOfSpeech:"verb",exampleGerman:"Wo kann ich mich anmelden?",exampleEnglish:"Where can I register?",relatedWords:[],verbForms:{present:"meldet sich an",preterite:"meldete sich an",perfect:"hat sich angemeldet"}},
+  {id:"a2_010",english:"to call (on the phone)",german:"anrufen",partOfSpeech:"verb",exampleGerman:"Kann ich Sie heute Abend anrufen?",exampleEnglish:"Can I call you this evening?",relatedWords:[],verbForms:{present:"ruft an",preterite:"rief an",perfect:"hat angerufen"}},
+  {id:"a2_011",english:"answer",german:"Antwort",article:"die",partOfSpeech:"noun",plural:"Antworten",exampleGerman:"Er gibt leider keine Antwort.",exampleEnglish:"Unfortunately he doesn't give an answer.",relatedWords:["antworten"],verbForms:null},
+  {id:"a2_012",english:"suit (clothing)",german:"Anzug",article:"der",partOfSpeech:"noun",plural:"Anzüge",exampleGerman:"Mein Mann kauft einen neuen Anzug.",exampleEnglish:"My husband is buying a new suit.",relatedWords:[],verbForms:null},
+  {id:"a2_013",english:"apple",german:"Apfel",article:"der",partOfSpeech:"noun",plural:"Äpfel",exampleGerman:"Ein Kilo Äpfel, bitte.",exampleEnglish:"A kilo of apples, please.",relatedWords:[],verbForms:null},
+  {id:"a2_014",english:"pharmacy",german:"Apotheke",article:"die",partOfSpeech:"noun",plural:"Apotheken",exampleGerman:"Das Medikament bekommen Sie in der Apotheke.",exampleEnglish:"You can get the medicine at the pharmacy.",relatedWords:[],verbForms:null},
+  {id:"a2_015",english:"to pick up / to collect",german:"abholen",partOfSpeech:"verb",exampleGerman:"Wann kann ich die Sachen abholen?",exampleEnglish:"When can I pick up the things?",relatedWords:[],verbForms:{present:"holt ab",preterite:"holte ab",perfect:"hat abgeholt"}},
+  {id:"a2_016",english:"to hand in",german:"abgeben",partOfSpeech:"verb",exampleGerman:"Ich muss meinen Schlüssel abgeben.",exampleEnglish:"I have to hand in my key.",relatedWords:["geben"],verbForms:{present:"gibt ab",preterite:"gab ab",perfect:"hat abgegeben"}},
+  {id:"a2_017",english:"to lock (a door)",german:"abschließen",partOfSpeech:"verb",exampleGerman:"Hast du die Tür abgeschlossen?",exampleEnglish:"Did you lock the door?",relatedWords:[],verbForms:{present:"schließt ab",preterite:"schloss ab",perfect:"hat abgeschlossen"}},
+  {id:"a2_018",english:"address",german:"Adresse",article:"die",partOfSpeech:"noun",plural:"Adressen",exampleGerman:"Können Sie mir Ihre Adresse geben?",exampleEnglish:"Can you give me your address?",relatedWords:[],verbForms:null},
+  {id:"a2_019",english:"clue (as in \"I have no clue\")",german:"Ahnung",article:"die",partOfSpeech:"noun",plural:"Ahnungen",exampleGerman:"Ich habe keine Ahnung.",exampleEnglish:"I have no idea.",relatedWords:[],verbForms:null},
+  {id:"a2_020",english:"active",german:"aktiv",partOfSpeech:"adjective",exampleGerman:"Peter ist sehr aktiv.",exampleEnglish:"Peter is very active.",relatedWords:[],verbForms:null},
+  {id:"a2_021",english:"current / up to date",german:"aktuell",partOfSpeech:"adjective",exampleGerman:"Das ist das aktuelle Kinoprogramm.",exampleEnglish:"This is the current cinema programme.",relatedWords:[],verbForms:null},
+  {id:"a2_022",english:"alone",german:"allein",partOfSpeech:"adverb",exampleGerman:"Nein, er kommt allein.",exampleEnglish:"No, he's coming alone.",relatedWords:[],verbForms:null},
+  {id:"a2_023",english:"old",german:"alt",partOfSpeech:"adjective",exampleGerman:"Wie alt sind Sie?",exampleEnglish:"How old are you?",relatedWords:["das Alter"],verbForms:null},
+  {id:"a2_024",english:"age",german:"Alter",article:"das",partOfSpeech:"noun",plural:null,exampleGerman:"Alter: 18 Jahre.",exampleEnglish:"Age: 18 years.",relatedWords:["alt"],verbForms:null},
+  {id:"a2_025",english:"traffic light",german:"Ampel",article:"die",partOfSpeech:"noun",plural:"Ampeln",exampleGerman:"Die Ampel ist grün.",exampleEnglish:"The traffic light is green.",relatedWords:[],verbForms:null},
+  {id:"a2_026",english:"to offer",german:"anbieten",partOfSpeech:"verb",exampleGerman:"Darf ich Ihnen ein Stück Kuchen anbieten?",exampleEnglish:"May I offer you a piece of cake?",relatedWords:["das Angebot"],verbForms:{present:"bietet an",preterite:"bot an",perfect:"hat angeboten"}},
+  {id:"a2_027",english:"to switch off (a light, a device)",german:"ausmachen",partOfSpeech:"verb",exampleGerman:"Mach bitte das Licht aus!",exampleEnglish:"Please switch off the light!",relatedWords:["anmachen"],verbForms:{present:"macht aus",preterite:"machte aus",perfect:"hat ausgemacht"}},
+  {id:"a2_028",english:"to get off (a bus, a train)",german:"aussteigen",partOfSpeech:"verb",exampleGerman:"Wo müssen wir aussteigen?",exampleEnglish:"Where do we have to get off?",relatedWords:["steigen","einsteigen","umsteigen"],verbForms:{present:"steigt aus",preterite:"stieg aus",perfect:"ist ausgestiegen"}},
+  {id:"a2_029",english:"ID card",german:"Ausweis",article:"der",partOfSpeech:"noun",plural:"Ausweise",exampleGerman:"Darf ich Ihren Ausweis sehen?",exampleEnglish:"May I see your ID card?",relatedWords:[],verbForms:null},
+  {id:"a2_030",english:"car",german:"Auto",article:"das",partOfSpeech:"noun",plural:"Autos",exampleGerman:"Er fährt mit dem Auto.",exampleEnglish:"He goes by car.",relatedWords:["die Autobahn"],verbForms:null},
+  {id:"a2_031",english:"motorway / highway",german:"Autobahn",article:"die",partOfSpeech:"noun",plural:"Autobahnen",exampleGerman:"Das Dorf liegt an der Autobahn.",exampleEnglish:"The village is next to the motorway.",relatedWords:["das Auto"],verbForms:null},
+  {id:"a2_032",english:"information (given at a desk)",german:"Auskunft",article:"die",partOfSpeech:"noun",plural:"Auskünfte",exampleGerman:"Können Sie mir eine Auskunft geben?",exampleEnglish:"Can you give me some information?",relatedWords:[],verbForms:null},
+  {id:"a2_033",english:"abroad / foreign countries",german:"Ausland",article:"das",partOfSpeech:"noun",plural:null,exampleGerman:"Fahren Sie ins Ausland?",exampleEnglish:"Are you going abroad?",relatedWords:[],verbForms:null},
+  {id:"a2_034",english:"to unpack",german:"auspacken",partOfSpeech:"verb",exampleGerman:"Packst du bitte den Koffer aus?",exampleEnglish:"Will you unpack the suitcase, please?",relatedWords:["der Koffer"],verbForms:{present:"packt aus",preterite:"packte aus",perfect:"hat ausgepackt"}},
+  {id:"a2_035",english:"to rest / to have a rest",german:"sich ausruhen",partOfSpeech:"verb",exampleGerman:"Ruh dich erst mal aus!",exampleEnglish:"Have a rest first!",relatedWords:[],verbForms:{present:"ruht sich aus",preterite:"ruhte sich aus",perfect:"hat sich ausgeruht"}},
+  {id:"a2_036",english:"to look (like) / to appear",german:"aussehen",partOfSpeech:"verb",exampleGerman:"Wie sieht er aus?",exampleEnglish:"What does he look like?",relatedWords:["sehen"],verbForms:{present:"sieht aus",preterite:"sah aus",perfect:"hat ausgesehen"}},
+  {id:"a2_037",english:"to pronounce",german:"aussprechen",partOfSpeech:"verb",exampleGerman:"Wie spricht man das Wort aus?",exampleEnglish:"How do you pronounce the word?",relatedWords:["sprechen"],verbForms:{present:"spricht aus",preterite:"sprach aus",perfect:"hat ausgesprochen"}},
+  {id:"a2_038",english:"exhibition",german:"Ausstellung",article:"die",partOfSpeech:"noun",plural:"Ausstellungen",exampleGerman:"Gehen wir in die Ausstellung?",exampleEnglish:"Shall we go to the exhibition?",relatedWords:[],verbForms:null},
+  {id:"a2_039",english:"to deliver (newspapers, post)",german:"austragen",partOfSpeech:"verb",exampleGerman:"Er trägt jeden Morgen die Zeitung aus.",exampleEnglish:"He delivers the newspaper every morning.",relatedWords:["tragen"],verbForms:{present:"trägt aus",preterite:"trug aus",perfect:"hat ausgetragen"}},
+  {id:"a2_040",english:"to chat (online)",german:"chatten",partOfSpeech:"verb",exampleGerman:"Luis chattet gern mit seinen Freunden.",exampleEnglish:"Luis likes chatting with his friends.",relatedWords:[],verbForms:{present:"chattet",preterite:"chattete",perfect:"hat gechattet"}},
+  {id:"a2_041",english:"train station",german:"Bahnhof",article:"der",partOfSpeech:"noun",plural:"Bahnhöfe",exampleGerman:"Wir treffen uns am Bahnhof.",exampleEnglish:"We'll meet at the station.",relatedWords:["das Gleis"],verbForms:null},
+  {id:"a2_042",english:"decision",german:"Entscheidung",article:"die",partOfSpeech:"noun",plural:"Entscheidungen",exampleGerman:"Das war eine schwierige Entscheidung.",exampleEnglish:"That was a difficult decision.",relatedWords:["entscheiden"],verbForms:null},
+  {id:"a2_043",english:"building",german:"Gebäude",article:"das",partOfSpeech:"noun",plural:"Gebäude",exampleGerman:"Das Gebäude hat zehn Stockwerke.",exampleEnglish:"The building has ten floors.",relatedWords:[],verbForms:null},
+  {id:"a2_044",english:"to get on / to get in (a vehicle)",german:"einsteigen",partOfSpeech:"verb",exampleGerman:"Bitte schnell einsteigen!",exampleEnglish:"Please get on quickly!",relatedWords:["steigen","aussteigen","umsteigen"],verbForms:{present:"steigt ein",preterite:"stieg ein",perfect:"ist eingestiegen"}},
+  {id:"a2_045",english:"to change (trains, buses)",german:"umsteigen",partOfSpeech:"verb",exampleGerman:"In Köln müssen Sie umsteigen.",exampleEnglish:"You have to change trains in Cologne.",relatedWords:["steigen","einsteigen","aussteigen"],verbForms:{present:"steigt um",preterite:"stieg um",perfect:"ist umgestiegen"}},
+  {id:"a2_046",english:"to answer / to reply",german:"antworten",partOfSpeech:"verb",exampleGerman:"Warum antwortest du nicht?",exampleEnglish:"Why don't you answer?",relatedWords:["die Antwort"],verbForms:{present:"antwortet",preterite:"antwortete",perfect:"hat geantwortet"}},
+  {id:"a2_047",english:"important",german:"wichtig",partOfSpeech:"adjective",exampleGerman:"Diese Information ist sehr wichtig.",exampleEnglish:"This information is very important.",relatedWords:[],verbForms:null},
+  {id:"a2_048",english:"because",german:"weil",partOfSpeech:"conjunction",grammar:"verb goes to the end",exampleGerman:"Ich bleibe zu Hause, weil ich krank bin.",exampleEnglish:"I'm staying at home because I'm ill.",relatedWords:["deshalb"],verbForms:null},
+  {id:"a2_049",english:"that (as in \"I think that…\")",german:"dass",partOfSpeech:"conjunction",grammar:"verb goes to the end",exampleGerman:"Ich glaube, dass er recht hat.",exampleEnglish:"I think that he's right.",relatedWords:[],verbForms:null},
+  {id:"a2_050",english:"if / whenever",german:"wenn",partOfSpeech:"conjunction",grammar:"verb goes to the end",exampleGerman:"Wenn es regnet, nehme ich den Bus.",exampleEnglish:"If it rains, I take the bus.",relatedWords:[],verbForms:null},
+  {id:"a2_051",english:"without",german:"ohne",partOfSpeech:"preposition",grammar:"+ accusative",exampleGerman:"Ich trinke Kaffee ohne Zucker.",exampleEnglish:"I drink coffee without sugar.",relatedWords:[],verbForms:null},
+  {id:"a2_052",english:"during",german:"während",partOfSpeech:"preposition",grammar:"+ genitive",exampleGerman:"Während des Essens spricht er nicht.",exampleEnglish:"He doesn't talk during the meal.",relatedWords:[],verbForms:null},
+  {id:"a2_053",english:"because of",german:"wegen",partOfSpeech:"preposition",grammar:"+ genitive",exampleGerman:"Wegen des Wetters bleiben wir zu Hause.",exampleEnglish:"Because of the weather we're staying at home.",relatedWords:[],verbForms:null},
+  {id:"a2_054",english:"between",german:"zwischen",partOfSpeech:"preposition",grammar:"+ dative (where?) / accusative (where to?)",exampleGerman:"Die Bank ist zwischen der Post und dem Supermarkt.",exampleEnglish:"The bank is between the post office and the supermarket.",relatedWords:[],verbForms:null},
+  {id:"a2_055",english:"already",german:"schon",partOfSpeech:"adverb",exampleGerman:"Bist du schon fertig?",exampleEnglish:"Are you finished already?",relatedWords:[],verbForms:null},
+  {id:"a2_056",english:"sometimes",german:"manchmal",partOfSpeech:"adverb",exampleGerman:"Manchmal fahre ich mit dem Fahrrad zur Arbeit.",exampleEnglish:"Sometimes I cycle to work.",relatedWords:[],verbForms:null},
+  {id:"a2_057",english:"actually / really",german:"eigentlich",partOfSpeech:"adverb",exampleGerman:"Eigentlich habe ich heute keine Zeit.",exampleEnglish:"Actually, I don't have time today.",relatedWords:[],verbForms:null},
+  {id:"a2_058",english:"to be happy / to be glad (about)",german:"sich freuen",partOfSpeech:"verb",exampleGerman:"Ich freue mich über das Geschenk.",exampleEnglish:"I'm happy about the present.",relatedWords:[],verbForms:{present:"freut sich",preterite:"freute sich",perfect:"hat sich gefreut"}},
+  {id:"a2_059",english:"to forget",german:"vergessen",partOfSpeech:"verb",exampleGerman:"Ich habe meinen Schlüssel vergessen.",exampleEnglish:"I've forgotten my key.",relatedWords:[],verbForms:{present:"vergisst",preterite:"vergaß",perfect:"hat vergessen"}},
+  {id:"a2_060",english:"to explain",german:"erklären",partOfSpeech:"verb",exampleGerman:"Kannst du mir das erklären?",exampleEnglish:"Can you explain that to me?",relatedWords:[],verbForms:{present:"erklärt",preterite:"erklärte",perfect:"hat erklärt"}},
+  {id:"a2_061",english:"to try",german:"versuchen",partOfSpeech:"verb",exampleGerman:"Ich versuche es noch einmal.",exampleEnglish:"I'll try it once more.",relatedWords:[],verbForms:{present:"versucht",preterite:"versuchte",perfect:"hat versucht"}},
+  {id:"a2_062",english:"to decide",german:"entscheiden",alternatives:["sich entscheiden"],partOfSpeech:"verb",exampleGerman:"Ich kann mich nicht entscheiden.",exampleEnglish:"I can't decide.",relatedWords:["die Entscheidung"],verbForms:{present:"entscheidet",preterite:"entschied",perfect:"hat entschieden"}},
+  {id:"a2_063",english:"to rent (as a tenant)",german:"mieten",partOfSpeech:"verb",exampleGerman:"Wir mieten eine Wohnung in der Stadt.",exampleEnglish:"We're renting a flat in the city.",relatedWords:["die Miete"],verbForms:{present:"mietet",preterite:"mietete",perfect:"hat gemietet"}},
+  {id:"a2_064",english:"rent (money you pay)",german:"Miete",article:"die",partOfSpeech:"noun",plural:"Mieten",exampleGerman:"Die Miete ist sehr hoch.",exampleEnglish:"The rent is very high.",relatedWords:["mieten"],verbForms:null},
+  {id:"a2_065",english:"flat / apartment",german:"Wohnung",article:"die",partOfSpeech:"noun",plural:"Wohnungen",exampleGerman:"Unsere Wohnung hat drei Zimmer.",exampleEnglish:"Our flat has three rooms.",relatedWords:["wohnen"],verbForms:null},
+  {id:"a2_066",english:"neighbour (male)",german:"Nachbar",article:"der",partOfSpeech:"noun",plural:"Nachbarn",exampleGerman:"Unser Nachbar ist sehr nett.",exampleEnglish:"Our neighbour is very nice.",relatedWords:["die Nachbarin"],verbForms:null},
+  {id:"a2_067",english:"appointment",german:"Termin",article:"der",partOfSpeech:"noun",plural:"Termine",exampleGerman:"Ich habe morgen einen Termin beim Arzt.",exampleEnglish:"I have a doctor's appointment tomorrow.",relatedWords:[],verbForms:null},
+  {id:"a2_068",english:"weather",german:"Wetter",article:"das",partOfSpeech:"noun",plural:null,exampleGerman:"Wie ist das Wetter heute?",exampleEnglish:"What's the weather like today?",relatedWords:["regnen"],verbForms:null},
+  {id:"a2_069",english:"holiday / vacation (time off work)",german:"Urlaub",article:"der",partOfSpeech:"noun",plural:"Urlaube",exampleGerman:"Im Sommer machen wir Urlaub am Meer.",exampleEnglish:"In summer we go on holiday by the sea.",relatedWords:[],verbForms:null},
+  {id:"a2_070",english:"suitcase",german:"Koffer",article:"der",partOfSpeech:"noun",plural:"Koffer",exampleGerman:"Mein Koffer ist zu schwer.",exampleEnglish:"My suitcase is too heavy.",relatedWords:["auspacken"],verbForms:null},
+  {id:"a2_071",english:"ticket (for a train or bus)",german:"Fahrkarte",article:"die",partOfSpeech:"noun",plural:"Fahrkarten",exampleGerman:"Wo kann ich eine Fahrkarte kaufen?",exampleEnglish:"Where can I buy a ticket?",relatedWords:["fahren"],verbForms:null},
+  {id:"a2_072",english:"platform / track (at a station)",german:"Gleis",article:"das",partOfSpeech:"noun",plural:"Gleise",exampleGerman:"Der Zug fährt von Gleis 5 ab.",exampleEnglish:"The train departs from platform 5.",relatedWords:["der Bahnhof"],verbForms:null},
+  {id:"a2_073",english:"departure",german:"Abfahrt",article:"die",partOfSpeech:"noun",plural:"Abfahrten",exampleGerman:"Die Abfahrt ist um acht Uhr.",exampleEnglish:"Departure is at eight o'clock.",relatedWords:["abfahren"],verbForms:null},
+  {id:"a2_074",english:"to depart / to leave (vehicle)",german:"abfahren",partOfSpeech:"verb",exampleGerman:"Der Bus fährt in fünf Minuten ab.",exampleEnglish:"The bus leaves in five minutes.",relatedWords:["die Abfahrt","fahren"],verbForms:{present:"fährt ab",preterite:"fuhr ab",perfect:"ist abgefahren"}},
+  {id:"a2_075",english:"delay",german:"Verspätung",article:"die",partOfSpeech:"noun",plural:"Verspätungen",exampleGerman:"Der Zug hat zehn Minuten Verspätung.",exampleEnglish:"The train is ten minutes late.",relatedWords:[],verbForms:null},
+  {id:"a2_076",english:"health",german:"Gesundheit",article:"die",partOfSpeech:"noun",plural:null,exampleGerman:"Sport ist gut für die Gesundheit.",exampleEnglish:"Sport is good for your health.",relatedWords:["gesund"],verbForms:null},
+  {id:"a2_077",english:"healthy",german:"gesund",partOfSpeech:"adjective",exampleGerman:"Obst ist gesund.",exampleEnglish:"Fruit is healthy.",relatedWords:["die Gesundheit","krank"],verbForms:null},
+  {id:"a2_078",english:"ill / sick",german:"krank",partOfSpeech:"adjective",exampleGerman:"Ich bin seit gestern krank.",exampleEnglish:"I've been ill since yesterday.",relatedWords:["gesund"],verbForms:null},
+  {id:"a2_079",english:"pain",german:"Schmerz",article:"der",partOfSpeech:"noun",plural:"Schmerzen",exampleGerman:"Ich habe Schmerzen im Rücken.",exampleEnglish:"I have pain in my back.",relatedWords:[],verbForms:null},
+  {id:"a2_080",english:"medicine / medication",german:"Medikament",article:"das",partOfSpeech:"noun",plural:"Medikamente",exampleGerman:"Nehmen Sie das Medikament dreimal am Tag.",exampleEnglish:"Take the medicine three times a day.",relatedWords:["die Apotheke"],verbForms:null},
+  {id:"a2_081",english:"tired",german:"müde",partOfSpeech:"adjective",exampleGerman:"Nach der Arbeit bin ich immer müde.",exampleEnglish:"I'm always tired after work.",relatedWords:[],verbForms:null},
+  {id:"a2_082",english:"expensive",german:"teuer",partOfSpeech:"adjective",exampleGerman:"Die Wohnung ist zu teuer.",exampleEnglish:"The flat is too expensive.",relatedWords:["billig"],verbForms:null},
+  {id:"a2_083",english:"cheap",german:"billig",alternatives:["günstig"],partOfSpeech:"adjective",exampleGerman:"Das T-Shirt war sehr billig.",exampleEnglish:"The T-shirt was very cheap.",relatedWords:["teuer"],verbForms:null},
+  {id:"a2_084",english:"empty",german:"leer",partOfSpeech:"adjective",exampleGerman:"Der Kühlschrank ist leer.",exampleEnglish:"The fridge is empty.",relatedWords:["voll"],verbForms:null},
+  {id:"a2_085",english:"full",german:"voll",partOfSpeech:"adjective",exampleGerman:"Der Bus ist heute sehr voll.",exampleEnglish:"The bus is very full today.",relatedWords:["leer"],verbForms:null},
+  {id:"a2_086",english:"dangerous",german:"gefährlich",partOfSpeech:"adjective",exampleGerman:"Die Straße ist im Winter gefährlich.",exampleEnglish:"The road is dangerous in winter.",relatedWords:[],verbForms:null},
+  {id:"a2_087",english:"possible",german:"möglich",partOfSpeech:"adjective",exampleGerman:"Ist das heute noch möglich?",exampleEnglish:"Is that still possible today?",relatedWords:[],verbForms:null},
+  {id:"a2_088",english:"enough",german:"genug",partOfSpeech:"adverb",exampleGerman:"Hast du genug Geld dabei?",exampleEnglish:"Do you have enough money on you?",relatedWords:[],verbForms:null},
+  {id:"a2_089",english:"unfortunately",german:"leider",partOfSpeech:"adverb",exampleGerman:"Leider kann ich heute nicht kommen.",exampleEnglish:"Unfortunately I can't come today.",relatedWords:[],verbForms:null},
+  {id:"a2_090",english:"together",german:"zusammen",partOfSpeech:"adverb",exampleGerman:"Wir kochen heute zusammen.",exampleEnglish:"We're cooking together today.",relatedWords:[],verbForms:null},
+  {id:"a2_091",english:"almost / nearly",german:"fast",partOfSpeech:"adverb",exampleGerman:"Ich bin fast fertig.",exampleEnglish:"I'm almost finished.",relatedWords:[],verbForms:null},
+  {id:"a2_092",english:"That doesn't matter. / Never mind.",german:"Das macht nichts.",partOfSpeech:"expression",exampleGerman:"Entschuldigung! – Das macht nichts.",exampleEnglish:"Sorry! – Never mind.",relatedWords:[],verbForms:null},
+  {id:"a2_093",english:"Have a good trip!",german:"Gute Reise!",partOfSpeech:"expression",exampleGerman:"Tschüss und gute Reise!",exampleEnglish:"Bye, and have a good trip!",relatedWords:[],verbForms:null},
+  {id:"a2_094",english:"How are you? (formal)",german:"Wie geht es Ihnen?",alternatives:["Wie geht's Ihnen?"],partOfSpeech:"expression",exampleGerman:"Guten Tag, Frau Weber! Wie geht es Ihnen?",exampleEnglish:"Hello, Mrs Weber! How are you?",relatedWords:[],verbForms:null},
+  {id:"a2_095",english:"Get well soon!",german:"Gute Besserung!",partOfSpeech:"expression",exampleGerman:"Du bist krank? Gute Besserung!",exampleEnglish:"You're ill? Get well soon!",relatedWords:["krank"],verbForms:null},
+  {id:"a2_096",english:"to be interested (in)",german:"sich interessieren",alternatives:["sich interessieren für"],partOfSpeech:"verb",grammar:"sich interessieren für + accusative",exampleGerman:"Ich interessiere mich für Musik.",exampleEnglish:"I'm interested in music.",relatedWords:[],verbForms:{present:"interessiert sich",preterite:"interessierte sich",perfect:"hat sich interessiert"}},
+  {id:"a2_097",english:"to look for / to search",german:"suchen",partOfSpeech:"verb",exampleGerman:"Ich suche meine Brille.",exampleEnglish:"I'm looking for my glasses.",relatedWords:[],verbForms:{present:"sucht",preterite:"suchte",perfect:"hat gesucht"}},
+  {id:"a2_098",english:"to invite",german:"einladen",partOfSpeech:"verb",exampleGerman:"Ich lade dich zu meinem Geburtstag ein.",exampleEnglish:"I'm inviting you to my birthday.",relatedWords:["die Einladung"],verbForms:{present:"lädt ein",preterite:"lud ein",perfect:"hat eingeladen"}},
+  {id:"a2_099",english:"invitation",german:"Einladung",article:"die",partOfSpeech:"noun",plural:"Einladungen",exampleGerman:"Vielen Dank für die Einladung!",exampleEnglish:"Thank you very much for the invitation!",relatedWords:["einladen"],verbForms:null},
+  {id:"a2_100",english:"to celebrate",german:"feiern",partOfSpeech:"verb",exampleGerman:"Wir feiern am Samstag eine Party.",exampleEnglish:"We're having a party on Saturday.",relatedWords:[],verbForms:{present:"feiert",preterite:"feierte",perfect:"hat gefeiert"}},
+  {id:"a2_101",english:"to rise / to climb",german:"steigen",partOfSpeech:"verb",exampleGerman:"Die Preise steigen jedes Jahr.",exampleEnglish:"Prices rise every year.",relatedWords:["einsteigen","aussteigen","umsteigen"],verbForms:{present:"steigt",preterite:"stieg",perfect:"ist gestiegen"}},
+  {id:"a2_102",english:"opinion",german:"Meinung",article:"die",partOfSpeech:"noun",plural:"Meinungen",exampleGerman:"Was ist deine Meinung?",exampleEnglish:"What's your opinion?",relatedWords:[],verbForms:null},
+  {id:"a2_103",english:"otherwise / or else",german:"sonst",partOfSpeech:"adverb",exampleGerman:"Beeil dich, sonst kommen wir zu spät.",exampleEnglish:"Hurry up, otherwise we'll be late.",relatedWords:[],verbForms:null},
+  {id:"a2_104",english:"therefore / that's why",german:"deshalb",partOfSpeech:"adverb",exampleGerman:"Ich bin müde, deshalb gehe ich ins Bett.",exampleEnglish:"I'm tired, that's why I'm going to bed.",relatedWords:["weil"],verbForms:null},
+  {id:"a2_105",english:"but (rather, after a negative)",german:"sondern",partOfSpeech:"conjunction",grammar:"after nicht / kein",exampleGerman:"Er kommt nicht heute, sondern morgen.",exampleEnglish:"He isn't coming today but tomorrow.",relatedWords:[],verbForms:null},
+  {id:"a2_106",english:"to rain",german:"regnen",partOfSpeech:"verb",exampleGerman:"Morgen soll es regnen.",exampleEnglish:"It's supposed to rain tomorrow.",relatedWords:["das Wetter"],verbForms:{present:"regnet",preterite:"regnete",perfect:"hat geregnet"}},
+  {id:"a2_107",english:"bill / invoice",german:"Rechnung",article:"die",partOfSpeech:"noun",plural:"Rechnungen",exampleGerman:"Die Rechnung, bitte!",exampleEnglish:"The bill, please!",relatedWords:["bezahlen"],verbForms:null},
+  {id:"a2_108",english:"to pay",german:"bezahlen",alternatives:["zahlen"],partOfSpeech:"verb",exampleGerman:"Kann ich mit Karte bezahlen?",exampleEnglish:"Can I pay by card?",relatedWords:["die Rechnung"],verbForms:{present:"bezahlt",preterite:"bezahlte",perfect:"hat bezahlt"}}
+  ]
+};
+</script>
+
+<!-- ============================================================
+     ENGINE  (repository, answer checker, progress, sessions, UI)
+     ============================================================ -->
+<script>
+(function(){
+'use strict';
+
+var APP_VERSION = '1.0.0';
+var LEVELS = ['A1','A2','B1','B2'];
+var ARTICLES = ['der','die','das'];
+var SET_TARGET = 58;          // aim for ~50–65 items per set
+var REPEAT_GAP = 3;           // cards between a mistake and its repeat
+var POS_ORDER = ['noun','verb','adjective','adverb','preposition','conjunction','expression','other'];
+var POS_LABEL = {noun:'noun',verb:'verb',adjective:'adjective',adverb:'adverb',preposition:'preposition',conjunction:'conjunction',expression:'expression',other:'word'};
+var KEY = { progress:'wortschatz.v1.progress', settings:'wortschatz.v1.settings', session:'wortschatz.v1.session' };
+
+/* ---------- storage (localStorage with in-memory fallback) ---------- */
+var memStore = {};
+var storageOK = (function(){ try{ var k='__wz'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
+var store = {
+  get: function(k, fallback){
+    if(storageOK){ try{ var v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); }catch(e){} }
+    return (k in memStore) ? memStore[k] : fallback;
+  },
+  set: function(k, v){
+    memStore[k] = v;
+    if(storageOK){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  },
+  del: function(k){
+    delete memStore[k];
+    if(storageOK){ try{ localStorage.removeItem(k); }catch(e){} }
+  }
+};
+
+/* ---------- vocabulary repository ---------- */
+var Vocab = {
+  byLevel: {}, byId: {}, sources: {}, _sets: {},
+  register: function(level, items, source){
+    var list = this.byLevel[level] || (this.byLevel[level] = []);
+    items.forEach(function(raw){
+      var it = Object.assign({ level: level, article: null, plural: null, alternatives: [], relatedWords: [], verbForms: null, grammar: null }, raw);
+      if(it.partOfSpeech === 'noun' && ARTICLES.indexOf(it.article) < 0){ console.warn('Noun without valid article:', it.id); }
+      if(Vocab.byId[it.id]) return;
+      Vocab.byId[it.id] = it; list.push(it);
+    });
+    if(source) this.sources[level] = source;
+    this._sets[level] = null;
+  },
+  items: function(level){ return this.byLevel[level] || []; },
+  sets: function(level){
+    if(this._sets[level]) return this._sets[level];
+    var items = this.items(level).slice();
+    var sets;
+    if(items.length && items.every(function(i){ return typeof i.set === 'number'; })){
+      var map = {};
+      items.forEach(function(i){ (map[i.set] = map[i.set] || []).push(i); });
+      sets = Object.keys(map).map(Number).sort(function(a,b){return a-b;}).map(function(n){ return map[n]; });
+    } else {
+      // Balanced sets: order by part of speech, then deal round-robin so every set gets a similar mix.
+      var k = Math.max(1, Math.round(items.length / SET_TARGET));
+      items.sort(function(a,b){ return (POS_ORDER.indexOf(a.partOfSpeech) - POS_ORDER.indexOf(b.partOfSpeech)) || (a.id < b.id ? -1 : 1); });
+      sets = []; for(var s=0;s<k;s++) sets.push([]);
+      items.forEach(function(it, i){ sets[i % k].push(it); });
+      sets.forEach(function(arr){ arr.sort(function(a,b){ return a.id < b.id ? -1 : 1; }); });
+    }
+    this._sets[level] = sets.map(function(arr, i){ return { index: i, name: 'Set ' + (i+1), items: arr }; });
+    return this._sets[level];
+  }
+};
+
+/* ---------- answer checking ---------- */
+function normalize(s){
+  return String(s || '').normalize('NFC').toLowerCase()
+    .replace(/[’‘`´]/g, "'")
+    .replace(/[.,!?;:¡¿"„“”–—()]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function fold(s){ return s.replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss'); }
+// Optimal string alignment distance (Levenshtein + adjacent transposition)
+function editDistance(a, b){
+  var m=a.length, n=b.length, d=[], i, j;
+  for(i=0;i<=m;i++){ d[i]=[i]; }
+  for(j=0;j<=n;j++){ d[0][j]=j; }
+  for(i=1;i<=m;i++){ for(j=1;j<=n;j++){
+    var cost = a[i-1]===b[j-1] ? 0 : 1;
+    d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost);
+    if(i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2]+1);
+  }}
+  return d[m][n];
+}
+function allowedSlips(target){
+  var len = target.replace(/[ ']/g,'').length;
+  if(len < 4) return 0;
+  if(len < 8) return 1;
+  return 2;
+}
+var _knownForms = null;
+function knownForms(){
+  if(_knownForms) return _knownForms;
+  _knownForms = {};
+  Object.keys(Vocab.byId).forEach(function(id){
+    var it = Vocab.byId[id];
+    [it.german].concat(it.alternatives || []).forEach(function(g){
+      var f = fold(normalize(g));
+      (_knownForms[f] = _knownForms[f] || []).push(id);
+    });
+  });
+  return _knownForms;
+}
+// Compare a typed word (already normalised) with a target. Returns 'exact' | 'umlaut' | 'close' | null.
+function compareWord(typed, target, item){
+  var t = normalize(target);
+  if(typed === t) return 'exact';
+  var ft = fold(typed), fg = fold(t);
+  if(ft === fg) return 'umlaut';
+  // A real, different vocabulary word is never a "typo".
+  var other = knownForms()[ft];
+  if(other && other.indexOf(item.id) < 0) return null;
+  var allowed = allowedSlips(t);
+  if(!allowed) return null;
+  if(fg.length < 10 && ft[0] !== fg[0]) return null;   // short words must start right
+  return editDistance(ft, fg) <= allowed ? 'close' : null;
+}
+function stripSich(s){ return s.replace(/^sich /,''); }
+
+function checkAnswer(item, input){
+  var typed = normalize(input);
+  var targets = [item.german].concat(item.alternatives || []);
+  if(!typed) return { ok:false, kind:'empty', typed:typed };
+
+  if(item.partOfSpeech === 'noun'){
+    var parts = typed.split(' ');
+    var art = parts[0];
+    if(ARTICLES.indexOf(art) < 0){
+      var nounOnly = targets.some(function(t){ return compareWord(typed, t, item); });
+      return { ok:false, kind:'noArticle', nounRight: nounOnly, typed:typed };
+    }
+    var rest = parts.slice(1).join(' ');
+    var match = null;
+    targets.some(function(t){ match = compareWord(rest, t, item); return !!match; });
+    if(art !== item.article) return { ok:false, kind:'wrongArticle', given:art, nounRight: !!match, typed:typed };
+    if(!rest) return { ok:false, kind:'wrong', typed:typed };
+    return match ? { ok:true, kind:match, typed:typed } : { ok:false, kind:'wrong', typed:typed };
+  }
+
+  var best = null;
+  targets.forEach(function(t){
+    var r = compareWord(typed, t, item);
+    if(!r && /^sich /.test(normalize(t))) r = compareWord(typed, stripSich(normalize(t)), item) && 'noSich';
+    if(r && (!best || rank(r) < rank(best))) best = r;
+  });
+  if(best) return { ok:true, kind:best, typed:typed };
+  return { ok:false, kind:'wrong', typed:typed };
+  function rank(k){ return {exact:0, umlaut:1, noSich:2, close:3}[k]; }
+}
+
+function fullAnswer(item){ return (item.article ? item.article + ' ' : '') + item.german; }
+function hintText(item, level){
+  var core = item.german;
+  if(level >= 3) return fullAnswer(item);
+  return core.slice(0, Math.min(level, core.length)) + '…';
+}
+
+/* ---------- progress ---------- */
+var progress = store.get(KEY.progress, {}) || {};
+function prog(id){
+  return progress[id] || { vocabularyId:id, attempts:0, correct:0, incorrect:0, hints:0, lastPracticed:null, difficult:false, streak:0 };
+}
+function saveProg(p){ progress[p.vocabularyId] = p; store.set(KEY.progress, progress); }
+function learned(p){ return p.correct > 0 && !p.difficult; }
+function statsFor(items){
+  var s = { total: items.length, attempted:0, learned:0, difficult:0 };
+  items.forEach(function(it){ var p = prog(it.id); if(p.attempts) s.attempted++; if(learned(p)) s.learned++; if(p.difficult) s.difficult++; });
+  return s;
+}
+
+/* ---------- settings ---------- */
+var settings = Object.assign({ level:'A2' }, store.get(KEY.settings, {}) || {});
+if(LEVELS.indexOf(settings.level) < 0) settings.level = 'A2';
+function saveSettings(){ store.set(KEY.settings, settings); }
+
+/* ---------- practice session ---------- */
+var session = store.get(KEY.session, null);
+if(session && (!session.queue || !session.queue.length)) session = null;
+function saveSession(){ if(session) store.set(KEY.session, session); else store.del(KEY.session); }
+
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+function startSession(level, setIndex, mode){
+  var set = Vocab.sets(level)[setIndex]; if(!set) return;
+  var ids = set.items.map(function(i){ return i.id; });
+  if(mode === 'mistakes') ids = ids.filter(function(id){ return prog(id).difficult; });
+  if(!ids.length){ toast('No difficult words in ' + set.name + ' right now.'); return; }
+  shuffle(ids);
+  session = { level:level, setIndex:setIndex, mode:mode, original:ids,
+    queue: ids.map(function(id){ return { id:id, repeat:false }; }),
+    pos:0, cards:{}, phase:'ask', hintLevel:0, last:null, startedAt: new Date().toISOString() };
+  ids.forEach(function(id){ session.cards[id] = { first:null, wrongs:0, hinted:false, revealRequeued:false }; });
+  saveSession();
+  ui.screen = 'practice'; render(); focusInput();
+}
+function requeue(id){
+  var at = Math.min(session.pos + 1 + REPEAT_GAP, session.queue.length);
+  session.queue.splice(at, 0, { id:id, repeat:true });
+}
+function currentEntry(){ return session && session.queue[session.pos]; }
+
+function submitAnswer(input, giveUp){
+  var entry = currentEntry(); if(!entry || session.phase !== 'ask') return;
+  var item = Vocab.byId[entry.id];
+  var card = session.cards[entry.id];
+  var res = giveUp ? { ok:false, kind:'gaveUp', typed:'' } : checkAnswer(item, input);
+  if(res.kind === 'empty'){ shakeInput(); return; }
+
+  var p = prog(item.id);
+  var firstAttempt = card.first === null;
+  var revealed = session.hintLevel >= 3;
+  p.attempts++; p.lastPracticed = new Date().toISOString();
+  if(session.hintLevel > 0){ p.hints++; card.hinted = true; }
+
+  if(res.ok){
+    p.correct++;
+    if(firstAttempt) card.first = revealed ? 'revealed' : 'correct';
+    if(firstAttempt && session.hintLevel === 0){ p.difficult = false; p.streak = (p.streak || 0) + 1; }
+    if(revealed && !card.revealRequeued){ card.revealRequeued = true; requeue(item.id); res.requeued = true; }
+  } else {
+    p.incorrect++; p.streak = 0; p.difficult = true;
+    if(firstAttempt) card.first = 'incorrect';
+    card.wrongs++;
+    requeue(item.id); res.requeued = true;
+  }
+  saveProg(p);
+  session.phase = 'feedback';
+  session.last = res;
+  saveSession();
+  render();
+  var nb = document.getElementById('next-btn'); if(nb) nb.focus({ preventScroll:true });
+}
+
+function nextCard(){
+  if(!session) return;
+  session.pos++; session.phase = 'ask'; session.hintLevel = 0; session.last = null;
+  if(session.pos >= session.queue.length){ finishSession(); return; }
+  saveSession(); render(); focusInput();
+}
+
+function finishSession(){
+  var s = session, ids = s.original;
+  var difficult = ids.filter(function(id){ return s.cards[id].wrongs > 0; });
+  ui.summary = {
+    level:s.level, setIndex:s.setIndex, mode:s.mode, total: ids.length,
+    correct: ids.filter(function(id){ return s.cards[id].first === 'correct'; }).length,
+    incorrect: difficult.length,
+    hints: ids.filter(function(id){ return s.cards[id].hinted; }).length,
+    difficult: difficult
+  };
+  session = null; saveSession();
+  ui.screen = 'summary'; render(); window.scrollTo(0,0);
+}
+
+function useHint(){
+  if(!session || session.phase !== 'ask' || session.hintLevel >= 3) return;
+  session.hintLevel++;
+  saveSession();
+  var item = Vocab.byId[currentEntry().id];
+  var out = document.getElementById('hint-out');
+  if(out) out.innerHTML = hintMarkup(item, session.hintLevel);
+  var hb = document.getElementById('hint-btn');
+  if(hb){ hb.disabled = session.hintLevel >= 3; hb.querySelector('.n').textContent = hintBtnLabel(session.hintLevel); }
+}
+function hintBtnLabel(lvl){ return lvl === 0 ? 'Hint' : lvl < 2 ? 'More' : lvl < 3 ? 'Show' : 'Shown'; }
+function hintMarkup(item, lvl){
+  if(!lvl) return '';
+  if(lvl >= 3) return answerMarkup(item) + '<small>type it to continue</small>';
+  return esc(hintText(item, lvl));
+}
+
+/* ---------- UI ---------- */
+var ui = { screen: 'home', summary: null, confirmReset: false };
+var app = document.getElementById('app');
+
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function answerMarkup(item){
+  if(item.article) return '<span class="art-' + item.article + '">' + item.article + '</span> ' + esc(item.german);
+  return esc(item.german);
+}
+function pct(a,b){ return b ? Math.round(100*a/b) : 0; }
+
+var ICON = {
+  gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  back:'<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
+  close:'<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+};
+
+function render(){
+  var html = '';
+  if(ui.screen === 'practice' && session) html = renderPractice();
+  else if(ui.screen === 'summary' && ui.summary) html = renderSummary();
+  else if(ui.screen === 'settings') html = renderSettings();
+  else { ui.screen = 'home'; html = renderHome(); }
+  app.innerHTML = html;
+  onScroll();
+}
+
+function renderHome(){
+  var level = settings.level;
+  var sets = Vocab.sets(level);
+  var all = Vocab.items(level);
+  var st = statsFor(all);
+  var h = '<header class="bar"><div class="brand"><span class="mark" aria-hidden="true">Ä</span>Wortschatz</div>' +
+    '<button class="icon-btn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></header>';
+  h += '<div class="levels" role="group" aria-label="Level">' + LEVELS.map(function(l){
+    return '<button data-act="level" data-level="' + l + '" aria-pressed="' + (l===level) + '" class="' + (Vocab.items(l).length ? 'has-data' : '') + '">' + l + '<span class="dot"></span></button>';
+  }).join('') + '</div>';
+
+  if(session){
+    var ss = Vocab.sets(session.level)[session.setIndex];
+    h += '<div class="resume"><div class="txt"><b>Continue ' + session.level + ' · ' + esc(ss ? ss.name : '') + (session.mode==='mistakes' ? ' mistakes' : '') + '</b>' +
+      '<span>Card ' + originalDone() + ' of ' + session.original.length + ' · your place is saved</span></div>' +
+      '<div class="acts"><button class="drop" data-act="discard">Discard</button><button class="go" data-act="resume">Continue</button></div></div>';
+  }
+
+  if(!all.length){
+    h += '<div class="level-head"><div class="row"><span class="level-big">' + level + '</span></div></div>';
+    h += '<div class="empty"><h3>No ' + level + ' vocabulary yet</h3><p>The trainer is ready for ' + level + '. Once ' + level + ' word data is added, its sets appear here automatically.</p><p>A2 has a sample set you can practise now.</p>' +
+      (level !== 'A2' ? '<button class="btn primary" data-act="level" data-level="A2">Go to A2</button>' : '') + '</div>';
+    return h;
+  }
+
+  h += '<section class="level-head"><div class="row"><span class="level-big">' + level + '</span>' +
+    '<div class="level-stats"><span><strong>' + st.learned + '</strong> of <strong>' + st.total + '</strong> words learned · ' + pct(st.learned, st.total) + '%</span>' +
+    '<span><strong>' + st.attempted + '</strong> practised · <strong>' + st.difficult + '</strong> difficult</span></div></div>' +
+    meter(st) + '<p class="note">Sample A2 vocabulary: ' + st.total + ' words in ' + sets.length + ' sets. Not the full Goethe A2 list.</p></section>';
+
+  h += '<div class="sets">' + sets.map(function(set){
+    var s = statsFor(set.items);
+    return '<article class="set"><div class="set-top"><span class="set-name">' + esc(set.name) + '</span><span class="set-count">' + s.total + ' words</span></div>' +
+      meter(s, true) +
+      '<div class="set-stats">' +
+        '<div class="stat"><span class="k">Learned</span><span class="v">' + s.learned + '<small> / ' + s.total + '</small></span></div>' +
+        '<div class="stat"><span class="k">Practised</span><span class="v">' + s.attempted + '</span></div>' +
+        '<div class="stat' + (s.difficult ? ' bad' : '') + '"><span class="k">Difficult</span><span class="v">' + s.difficult + '</span></div>' +
+      '</div><div class="set-acts">' +
+        '<button class="btn primary" data-act="start" data-set="' + set.index + '" data-mode="set">Practice set</button>' +
+        (s.difficult
+          ? '<button class="btn" data-act="start" data-set="' + set.index + '" data-mode="mistakes">Mistakes <span class="count">' + s.difficult + '</span></button>'
+          : '<button class="btn" disabled title="No difficult words currently">No mistakes</button>') +
+      '</div></article>';
+  }).join('') + '</div>';
+  return h;
+}
+function meter(s, thin){
+  var lw = pct(s.learned, s.total), dw = pct(s.difficult, s.total);
+  return '<div class="meter' + (thin ? ' thin' : '') + '" role="img" aria-label="' + s.learned + ' of ' + s.total + ' learned, ' + s.difficult + ' difficult"><i style="width:' + lw + '%"></i><i class="diff" style="width:' + dw + '%"></i></div>';
+}
+function originalDone(){
+  var n = 0;
+  for(var i=0;i<=session.pos && i<session.queue.length;i++){ if(!session.queue[i].repeat) n++; }
+  return Math.max(1, Math.min(n, session.original.length));
+}
+
+function renderPractice(){
+  var entry = currentEntry();
+  var item = Vocab.byId[entry.id];
+  if(!item){ session = null; saveSession(); return renderHome(); }
+  var set = Vocab.sets(session.level)[session.setIndex];
+  var repeatsLeft = session.queue.slice(session.pos + (session.phase==='feedback' ? 1 : 0)).filter(function(e){ return e.repeat; }).length;
+  var done = session.pos + (session.phase === 'feedback' ? 1 : 0);
+  var h = '<header class="bar"><button class="icon-btn" data-act="quit" aria-label="Leave practice (your place is saved)">' + ICON.close + '</button>' +
+    '<div class="bar-title">' + esc(set ? set.name : '') + (session.mode === 'mistakes' ? ' · Mistakes' : '') + '</div>' +
+    '<div class="prac-meta"><b>' + originalDone() + ' / ' + session.original.length + '</b><span>' + (repeatsLeft ? repeatsLeft + ' to repeat' : '&nbsp;') + '</span></div></header>';
+  h += '<div class="prac-progress"><div class="meter thin"><i style="width:' + pct(done, session.queue.length) + '%"></i></div></div>';
+
+  h += '<div class="card"><div><div class="prompt-label">English <span class="chip">' + POS_LABEL[item.partOfSpeech] + (item.partOfSpeech==='noun' ? ' · with der / die / das' : '') + '</span>' +
+    (entry.repeat ? '<span class="chip again">Again</span>' : '') + '</div>' +
+    '<div class="prompt" lang="en">' + esc(item.english) + '</div></div>';
+
+  if(session.phase === 'ask'){
+    h += '<input id="answer" class="answer-input" type="text" lang="de" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="' + (item.partOfSpeech==='noun' ? 'der / die / das + word' : 'Type the German') + '" aria-label="Your German answer">' +
+      '<div class="tools">' + ['ä','ö','ü','ß'].map(function(c){ return '<button class="key" data-keep="char" data-char="' + c + '" aria-label="Insert ' + c + '">' + c + '</button>'; }).join('') +
+      '<span class="spacer"></span><button id="hint-btn" class="hint-btn" data-keep="hint"' + (session.hintLevel>=3 ? ' disabled' : '') + '>💡 <span class="n">' + hintBtnLabel(session.hintLevel) + '</span></button></div>' +
+      '<div id="hint-out" class="hint-out" aria-live="polite">' + hintMarkup(item, session.hintLevel) + '</div>' +
+      '<div class="ask-acts"><button class="btn skip" data-act="giveup">Don\'t know</button><button class="btn dark big" data-act="submit">Check</button></div>';
+  } else {
+    h += renderFeedback(item, session.last);
+  }
+  h += '</div>';
+  return h;
+}
+
+function renderFeedback(item, res){
+  var h = '';
+  var typed = esc(res.typed);
+  if(res.ok){
+    var msg = '';
+    if(res.kind === 'close') msg = 'Accepted with a small spelling slip. You wrote <s>' + typed + '</s>.';
+    else if(res.kind === 'umlaut') msg = 'Accepted. The usual spelling uses ä / ö / ü / ß.';
+    else if(res.kind === 'noSich') msg = 'Accepted. Remember the reflexive <b>sich</b>.';
+    else if(res.requeued) msg = 'You used the full hint, so this word comes back once more.';
+    h += '<div class="verdict ok"><h2>✓ Correct</h2>' + (msg ? '<p>' + msg + '</p>' : '') + '</div>';
+  } else {
+    var why = '';
+    if(res.kind === 'wrongArticle') why = res.nounRight ? 'Right word, wrong article: it\'s <b class="art-' + item.article + '">' + item.article + '</b>, not ' + esc(res.given) + '.' : 'You wrote <s>' + typed + '</s>.';
+    else if(res.kind === 'noArticle') why = res.nounRight ? 'Right word, but the article is missing. Nouns are learned with der, die or das.' : 'You wrote <s>' + typed + '</s>. Nouns need their article.';
+    else if(res.kind === 'gaveUp') why = 'No problem. Study it now; it comes back in a few cards.';
+    else why = 'You wrote <s>' + typed + '</s>.';
+    if(res.kind !== 'gaveUp') why += ' It comes back in a few cards.';
+    h += '<div class="verdict bad"><h2>✗ Incorrect</h2><p>' + why + '</p></div>';
+  }
+  h += '<div class="solution" lang="de"><span class="lbl">' + (res.ok ? 'German' : 'Correct answer') + '</span>' + answerMarkup(item) + '</div>';
+
+  var facts = '';
+  if(item.partOfSpeech === 'noun') facts += '<div class="fact"><span class="k">Plural</span><span lang="de">' + (item.plural ? 'die ' + esc(item.plural) : 'usually no plural') + '</span></div>';
+  if(item.verbForms){
+    var vf = item.verbForms;
+    facts += '<div class="fact"><span class="k">Forms</span><span class="forms" lang="de">' + esc(item.german) + '<span class="arrow">→</span>' + esc(vf.preterite) + '<span class="arrow">→</span>' + esc(vf.perfect) + '</span></div>';
+    if(vf.present) facts += '<div class="fact"><span class="k">er / sie</span><span lang="de">' + esc(vf.present) + '</span></div>';
+  }
+  if(item.grammar) facts += '<div class="fact"><span class="k">Note</span><span>' + esc(item.grammar) + '</span></div>';
+  if(item.alternatives && item.alternatives.length) facts += '<div class="fact"><span class="k">Also</span><span lang="de">' + item.alternatives.map(esc).join(', ') + '</span></div>';
+  if(item.relatedWords && item.relatedWords.length) facts += '<div class="fact"><span class="k">Related</span><span class="related" lang="de">' + item.relatedWords.map(function(w){ return '<span>' + esc(w) + '</span>'; }).join('') + '</span></div>';
+  if(facts) h += '<div class="facts">' + facts + '</div>';
+
+  if(item.exampleGerman) h += '<div class="example"><span class="de" lang="de">' + esc(item.exampleGerman) + '</span><span class="en">' + esc(item.exampleEnglish) + '</span></div>';
+  var last = session.pos + 1 >= session.queue.length;
+  h += '<button id="next-btn" class="btn primary big" data-act="next">' + (last ? 'Finish' : 'Next') + '</button>';
+  return h;
+}
+
+function renderSummary(){
+  var s = ui.summary;
+  var set = Vocab.sets(s.level)[s.setIndex];
+  var setStats = statsFor(set.items);
+  var h = '<header class="bar"><button class="icon-btn" data-act="home" aria-label="Back to sets">' + ICON.back + '</button><div class="bar-title">' + s.level + ' · ' + esc(set.name) + '</div></header>';
+  h += '<div class="sum-head"><h1>' + (s.mode === 'mistakes' ? 'Mistakes done' : 'Set complete') + '</h1><p>' + s.total + ' words' + (s.mode==='mistakes' ? ' practised from your difficult list' : '') + '</p></div>';
+  h += '<div class="tally"><div class="ok"><b>' + s.correct + '</b><span>✓ First try</span></div><div class="bad"><b>' + s.incorrect + '</b><span>✗ Missed</span></div><div class="hint"><b>' + s.hints + '</b><span>💡 Hinted</span></div></div>';
+  if(s.difficult.length){
+    h += '<h2 class="section-title">Difficult words</h2><ul class="wordlist">' + s.difficult.map(function(id){
+      var it = Vocab.byId[id]; return '<li><b lang="de">' + answerMarkup(it) + '</b><span>' + esc(it.english) + '</span></li>';
+    }).join('') + '</ul>';
+  } else {
+    h += '<p class="note" style="margin:0 0 20px">No mistakes this round.</p>';
+  }
+  h += '<div class="stack"><button class="btn primary big" data-act="start" data-set="' + s.setIndex + '" data-mode="' + s.mode + '">Practice again</button>' +
+    (setStats.difficult ? '<button class="btn big" data-act="start" data-set="' + s.setIndex + '" data-mode="mistakes">Practice mistakes (' + setStats.difficult + ')</button>' : '<button class="btn big" disabled>No difficult words currently</button>') +
+    '<button class="btn big" data-act="home">Back to sets</button></div>';
+  return h;
+}
+
+function renderSettings(){
+  var h = '<header class="bar"><button class="icon-btn" data-act="home" aria-label="Back">' + ICON.back + '</button><div class="bar-title">Settings</div></header>';
+  h += '<section class="group"><h2>Current level</h2><div class="body"><div class="levels" role="group" aria-label="Level" style="margin:0">' + LEVELS.map(function(l){
+    return '<button data-act="level" data-level="' + l + '" data-stay="1" aria-pressed="' + (l===settings.level) + '" class="' + (Vocab.items(l).length ? 'has-data' : '') + '">' + l + '<span class="dot"></span></button>';
+  }).join('') + '</div><p class="note">Levels with a yellow dot have vocabulary.</p></div></section>';
+
+  var total = Object.keys(progress).length;
+  h += '<section class="group"><h2>Progress</h2><div class="body">' +
+    '<div class="kv"><span>Words practised</span><b>' + total + '</b></div>' +
+    '<p class="note">' + (storageOK ? 'Saved in this browser on this device. Nothing is sent anywhere.' : 'This browser is blocking storage, so progress lasts only until you close the page.') + '</p>';
+  if(ui.confirmReset){
+    h += '<div class="confirm"><p><b>Reset all progress?</b> This clears attempts, difficult words and any unfinished session for every level. It can\'t be undone.</p>' +
+      '<div class="row"><button class="btn" data-act="reset-cancel">Cancel</button><button class="btn danger" data-act="reset-confirm">Reset everything</button></div></div>';
+  } else {
+    h += '<button class="btn" data-act="reset-ask" style="color:var(--bad)">Reset all progress</button>';
+  }
+  h += '</div></section>';
+
+  h += '<section class="group"><h2>About</h2><div class="body"><p>Wortschatz is an active-recall trainer. You see the English, type the German, and every noun needs its article. Missed words come back a few cards later in the same session until you get them right.</p>' +
+    '<p class="note">Spelling: case and extra spaces are ignored. Short slips are accepted (1 letter for words of 4–7 letters, 2 for longer words), but the article must always be right. ae / oe / ue / ss count as ä / ö / ü / ß.</p></div></section>';
+  h += '<section class="group"><h2>Vocabulary source</h2><div class="body">' + LEVELS.map(function(l){
+    var n = Vocab.items(l).length;
+    return '<div class="kv"><span>' + l + '</span><b>' + (n ? n + ' words' : 'not added yet') + '</b></div>';
+  }).join('') + '<p class="note">' + esc(Vocab.sources.A2 || '') + ' Official list: Goethe-Zertifikat A2 Wortliste, Goethe-Institut. Use your own authorised copy to add the full list.</p></div></section>';
+  h += '<section class="group"><h2>App</h2><div class="body"><div class="kv"><span>Version</span><b>' + APP_VERSION + '</b></div></div></section>';
+  return h;
+}
+
+/* ---------- events ---------- */
+function focusInput(){ var i = document.getElementById('answer'); if(i){ try{ i.focus({ preventScroll:true }); }catch(e){ i.focus(); } } }
+function shakeInput(){ var i = document.getElementById('answer'); if(!i) return; i.classList.remove('shake'); void i.offsetWidth; i.classList.add('shake'); i.focus(); }
+function insertChar(c){
+  var i = document.getElementById('answer'); if(!i) return;
+  var s = i.selectionStart == null ? i.value.length : i.selectionStart, e = i.selectionEnd == null ? s : i.selectionEnd;
+  i.value = i.value.slice(0, s) + c + i.value.slice(e);
+  i.setSelectionRange(s + 1, s + 1); i.focus();
+}
+var toastTimer;
+function toast(msg){
+  var t = document.querySelector('.toast'); if(t) t.remove();
+  t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role','status'); t.textContent = msg;
+  document.body.appendChild(t); clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.remove(); }, 2600);
+}
+
+document.addEventListener('click', function(ev){
+  var el = ev.target.closest('[data-act]'); if(!el || el.disabled) return;
+  var act = el.getAttribute('data-act');
+  switch(act){
+    case 'settings': ui.screen = 'settings'; ui.confirmReset = false; render(); window.scrollTo(0,0); break;
+    case 'home': ui.screen = 'home'; render(); window.scrollTo(0,0); break;
+    case 'level':
+      settings.level = el.getAttribute('data-level'); saveSettings();
+      if(!el.getAttribute('data-stay')) ui.screen = 'home';
+      render(); break;
+    case 'start': startSession(ui.screen === 'summary' && ui.summary ? ui.summary.level : settings.level, +el.getAttribute('data-set'), el.getAttribute('data-mode')); window.scrollTo(0,0); break;
+    case 'resume': ui.screen = 'practice'; render(); if(session.phase === 'ask') focusInput(); break;
+    case 'discard': session = null; saveSession(); render(); toast('Unfinished session discarded. Progress so far is kept.'); break;
+    case 'quit': ui.screen = 'home'; render(); window.scrollTo(0,0); break;
+    case 'submit': var i = document.getElementById('answer'); submitAnswer(i ? i.value : ''); break;
+    case 'giveup': submitAnswer('', true); break;
+    case 'next': nextCard(); break;
+    case 'reset-ask': ui.confirmReset = true; render(); break;
+    case 'reset-cancel': ui.confirmReset = false; render(); break;
+    case 'reset-confirm':
+      progress = {}; store.set(KEY.progress, progress); session = null; saveSession();
+      ui.confirmReset = false; render(); toast('All progress reset.'); break;
+  }
+});
+
+// Ä/Ö/Ü/ß keys and Hint keep the keyboard open on iPhone: act on touchstart / mousedown and prevent the blur.
+function keepFocusAction(ev){
+  var el = ev.target.closest('[data-keep]'); if(!el || el.disabled) return;
+  ev.preventDefault();
+  if(el.getAttribute('data-keep') === 'char') insertChar(el.getAttribute('data-char'));
+  else useHint();
+}
+document.addEventListener('touchstart', keepFocusAction, { passive:false });
+document.addEventListener('mousedown', function(ev){ if(ev.button === 0) keepFocusAction(ev); });
+document.addEventListener('keydown', function(ev){
+  if(ev.target.closest && ev.target.closest('[data-keep]') && (ev.key === 'Enter' || ev.key === ' ')){ keepFocusAction(ev); return; }
+  if(ev.key !== 'Enter' || ev.repeat || ui.screen !== 'practice' || !session) return;
+  if(session.phase === 'ask' && ev.target.id === 'answer'){ ev.preventDefault(); submitAnswer(ev.target.value); }
+  else if(session.phase === 'feedback'){ ev.preventDefault(); nextCard(); }
+});
+
+function onScroll(){ var b = document.querySelector('.bar'); if(b) b.classList.toggle('scrolled', window.scrollY > 4); }
+window.addEventListener('scroll', onScroll, { passive:true });
+
+/* ---------- boot ---------- */
+var data = window.WORTSCHATZ_DATA || {};
+Object.keys(data).forEach(function(level){ Vocab.register(level, data[level].items || [], data[level].source); });
+if(session && !Vocab.byId[session.queue[0] && session.queue[0].id]){ session = null; saveSession(); }
+
+// Public hooks for adding vocabulary later without touching the engine.
+window.Wortschatz = {
+  version: APP_VERSION,
+  registerVocabulary: function(level, items, source){ Vocab.register(level, items, source); _knownForms = null; render(); },
+  checkAnswer: function(id, input){ return checkAnswer(Vocab.byId[id], input); }
+};
+
+render();
+
+// Offline support when self-hosted (sw.js beside this page). Skipped inside embedded previews.
+(function(){
+  var top = false; try{ top = window.top === window.self; }catch(e){}
+  if(!top || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+})();
+})();
+</script>
