@@ -1,5 +1,5 @@
 // Offline cache for Wortschatz. Bump VERSION when files change.
-const VERSION = 'wortschatz-v1.0.0';
+const VERSION = 'wortschatz-v1.1.0';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
